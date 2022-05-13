@@ -3,7 +3,6 @@ package string_sum
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -26,84 +25,73 @@ var (
 //
 // Use the errors defined above as described, again wrapping into fmt.Errorf
 
+var d = ""
+
 func StringSum(input string) (output string, err error) {
-	input = strings.TrimSpace(input)
-	if len(input) == 0 {
-		return "", fmt.Errorf("e1: %w", errorEmptyInput)
+
+	innerWithoutSpace := strings.ReplaceAll(input, " ", "")
+	fmt.Println(input)
+	if d != input {
+		d = input
+		fmt.Println(StringSum(input))
 	}
 
-	lessPatern := `^[\s\+-]{0,}\d{1,}$`
-	re := regexp.MustCompile(lessPatern)
-	less := re.FindAllString(input, 1)
-	if len(less) == 1 {
-		return "", fmt.Errorf("e2: %w", errorNotTwoOperands)
+	if len(innerWithoutSpace) == 0 {
+		err = fmt.Errorf("errorEmptyInput: %w", errorEmptyInput)
+		return
 	}
 
-	pattern := `^[\s\+-]{0,}[0-9a-z]{1,}[\s\+-]{0,}[0-9a-z]{1,}`
-	re = regexp.MustCompile(pattern)
-	remain := re.ReplaceAllString(input, "")
-	if len(remain) > 0 {
-		return "", fmt.Errorf("e3: %w", errorNotTwoOperands)
-	}
+	err = nil
+	currentToken := ""
+	arguments := make([]string, 0)
 
-	var x, y int
-	var started, signMinus, definedX bool
-
-	for _, v := range input {
-		val := string(v)
-		if !definedX {
-			_, err := strconv.Atoi(val)
-			if err != nil {
-				if val == "-" {
-					signMinus = true
-				} else if val == "+" || val == " " {
-				} else {
-					return "", fmt.Errorf("e3: %w",
-						&strconv.NumError{
-							Func: "Atoi",
-							Num:  strconv.Itoa(x) + val,
-							Err:  strconv.ErrSyntax,
-						})
-				}
-				if started {
-					definedX = true
-				}
+	for _, v := range innerWithoutSpace {
+		if v == 45 { // -
+			if len(currentToken) > 0 {
+				arguments = append(arguments, currentToken)
+				currentToken = string(v)
 			} else {
-				x, _ = strconv.Atoi(strconv.Itoa(x) + val)
-				if signMinus {
-					x = -x
-				} else {
-					x = x
-				}
-				signMinus = false
-				started = true
+				currentToken += string(v)
 			}
-		} else if definedX {
-			_, err := strconv.Atoi(val)
-			if err != nil {
-				if val == "-" {
-					signMinus = true
-				} else if val == "+" || val == " " {
-				} else {
-					return "", fmt.Errorf("e3: %w",
-						&strconv.NumError{
-							Func: "Atoi",
-							Num:  strconv.Itoa(y) + val,
-							Err:  strconv.ErrSyntax,
-						})
-				}
+		} else if v == 43 { //+
+			if len(currentToken) > 0 {
+				arguments = append(arguments, currentToken)
+				currentToken = ""
 			} else {
-				y, _ = strconv.Atoi(strconv.Itoa(y) + val)
-				if signMinus {
-					y = -y
-				} else {
-					y = y
-				}
-				signMinus = false
-
+				currentToken += string(v)
 			}
+		} else if v >= 48 && v <= 57 {
+			currentToken += string(v)
+		} else {
+			currentToken += string(v)
+			_, err2 := strconv.Atoi(currentToken)
+			err = fmt.Errorf("bad token: "+currentToken+" %w", err2)
+			return
 		}
 	}
 
-	return strconv.Itoa(x + y), nil
+	arguments = append(arguments, currentToken)
+
+	if len(arguments) != 2 {
+		err = fmt.Errorf("errorNotTwoOperands: %w", errorNotTwoOperands)
+		return
+	}
+
+	val1, err := strconv.Atoi(arguments[0])
+
+	if err != nil {
+		err = fmt.Errorf("bad first argument")
+		return
+	}
+
+	val2, err := strconv.Atoi(arguments[1])
+
+	if err != nil {
+		err = fmt.Errorf("bad second argument")
+		return
+	}
+
+	output = fmt.Sprint(val1 + val2)
+
+	return
 }
