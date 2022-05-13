@@ -25,35 +25,30 @@ var (
 //
 // Use the errors defined above as described, again wrapping into fmt.Errorf
 
-func StringSum(input string) (string, error) {
-
-	input = strings.ReplaceAll(input, " ", "")
-	if len(input) == 0 {
-		return "", fmt.Errorf("%w", errorEmptyInput)
+func StringSum(input string) (output string, err error) {
+	in := strings.ReplaceAll(input, " ", "")
+	if in == "" {
+		err = fmt.Errorf("Error: %w", errorEmptyInput)
+		return
 	}
-
-	if operandsCount(input) != 2 {
-		return "", fmt.Errorf("%w", errorNotTwoOperands)
+	in = strings.ReplaceAll(in, "+", " ")
+	in = strings.ReplaceAll(in, "-", " -")
+	oper := strings.Fields(in)
+	if len(oper) != 2 {
+		err = fmt.Errorf("Error: %w", errorNotTwoOperands)
+		return
 	}
-
-	var operandBorder, firstOperand, secondOperand int
-	var err error
-	if operandBorder = strings.LastIndex(input, "+"); operandBorder == -1 {
-		operandBorder = strings.LastIndex(input, "-")
+	s1, er1 := strconv.Atoi(oper[0])
+	if er1 != nil {
+		err = fmt.Errorf("Error: %w", er1)
+		return
 	}
-	if firstOperand, err = strconv.Atoi(strings.TrimLeft(input[0:operandBorder], "+")); err != nil {
-		return "", fmt.Errorf("failed to convert %q: %w", input[0:operandBorder], err)
+	s2, er2 := strconv.Atoi(oper[1])
+	if er2 != nil {
+		err = fmt.Errorf("Error: %w", er2)
+		return
 	}
-	if secondOperand, err = strconv.Atoi(strings.TrimLeft(input[operandBorder:], "+")); err != nil {
-		return "", fmt.Errorf("failed to convert %q: %w", input[operandBorder:], err)
-	}
-	return fmt.Sprint(firstOperand + secondOperand), nil
-}
-
-func operandsCount(input string) (count int) {
-	input = strings.TrimLeft(strings.TrimLeft(input, "+"), "-")
-	for _, subInput := range strings.Split(input, "-") {
-		count = count + len(strings.Split(subInput, "+"))
-	}
+	output = strconv.Itoa(s1 + s2)
+	err = nil
 	return
 }
