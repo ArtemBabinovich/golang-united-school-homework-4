@@ -26,29 +26,75 @@ var (
 // Use the errors defined above as described, again wrapping into fmt.Errorf
 
 func StringSum(input string) (output string, err error) {
-	in := strings.ReplaceAll(input, " ", "")
-	if in == "" {
-		err = fmt.Errorf("Error: %w", errorEmptyInput)
-		return
+	operand, sumOperand := FindOperand(input)
+	if operand == "" && sumOperand == 1 {
+		err = fmt.Errorf("%w", errorEmptyInput)
+		return "", err
 	}
-	in = strings.ReplaceAll(in, "+", " ")
-	in = strings.ReplaceAll(in, "-", " -")
-	oper := strings.Fields(in)
-	if len(oper) != 2 {
-		err = fmt.Errorf("Error: %w", errorNotTwoOperands)
-		return
+	if operand == "" && sumOperand > 1 {
+		err = fmt.Errorf("%w", errorNotTwoOperands)
+		return "", err
 	}
-	s1, er1 := strconv.Atoi(oper[0])
-	if er1 != nil {
-		err = fmt.Errorf("Error: %w", er1)
-		return
+	nums := strings.Split(input, operand)
+	if len(nums) != 2 {
+		err = fmt.Errorf("%w", errorEmptyInput)
+		return "", err
 	}
-	s2, er2 := strconv.Atoi(oper[1])
-	if er2 != nil {
-		err = fmt.Errorf("Error: %w", er2)
-		return
+
+	num1, err := strconv.Atoi(nums[0])
+	if err != nil {
+		err = fmt.Errorf("%w", err)
+		return "", err
 	}
-	output = strconv.Itoa(s1 + s2)
-	err = nil
-	return
+	num2, err := strconv.Atoi(nums[1])
+	if err != nil {
+		err = fmt.Errorf("%w", err)
+		return "", err
+	}
+
+	result := Calculation(num1, num2, operand)
+	output = strconv.Itoa(result)
+	return output, nil
+}
+
+func Calculation(num1, num2 int, operand string) (result int) {
+	switch operand {
+	case "+":
+		result = num1 + num2
+	case "-":
+		result = num1 - num2
+	case "*":
+		result = num1 * num2
+	case "/":
+		result = num1 / num2
+	case "%":
+		result = num1 % num2
+	}
+	return result
+}
+
+func FindOperand(input string) (operand string, count int) {
+	for _, value := range input {
+		if value == '+' {
+			operand = "+"
+			count++
+		} else if value == '-' {
+			operand = "-"
+			count++
+		} else if value == '*' {
+			operand = "*"
+			count++
+		} else if value == '/' {
+			operand = "/"
+			count++
+		} else if value == '%' {
+			operand = "%"
+			count++
+		}
+	}
+	if count > 1 {
+		operand = ""
+		return operand, count
+	}
+	return operand, count
 }
