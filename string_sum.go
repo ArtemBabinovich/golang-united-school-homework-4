@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 //use these errors as appropriate, wrapping them with fmt.Errorf function
@@ -26,67 +25,35 @@ var (
 //
 // Use the errors defined above as described, again wrapping into fmt.Errorf
 
-func StringSum(input string) (output string, err error) {
+func StringSum(input string) (string, error) {
 
-	if input == "" || strings.TrimSpace(input) == "" {
+	input = strings.ReplaceAll(input, " ", "")
+	if len(input) == 0 {
 		return "", fmt.Errorf("%w", errorEmptyInput)
 	}
 
-	numSlice := operandQuant(input)
-	if len(numSlice) != 2 {
-		fmt.Println(numSlice, len(numSlice))
+	if operandsCount(input) != 2 {
 		return "", fmt.Errorf("%w", errorNotTwoOperands)
 	}
 
-	o1, err := strconv.Atoi(numSlice[0])
-	if err != nil {
-		return "", fmt.Errorf("first element of slice is not valid: %w", err)
+	var operandBorder, firstOperand, secondOperand int
+	var err error
+	if operandBorder = strings.LastIndex(input, "+"); operandBorder == -1 {
+		operandBorder = strings.LastIndex(input, "-")
 	}
-	o2, err := strconv.Atoi(numSlice[1])
-	if err != nil {
-		return "", fmt.Errorf("second element of slice is not valid: %w", err)
+	if firstOperand, err = strconv.Atoi(strings.TrimLeft(input[0:operandBorder], "+")); err != nil {
+		return "", fmt.Errorf("failed to convert %q: %w", input[0:operandBorder], err)
 	}
-
-	so1, so2 := signs(input, numSlice[0])
-
-	sum := o1*so1 + o2*so2
-	output = strconv.Itoa(sum)
-
-	return output, nil
+	if secondOperand, err = strconv.Atoi(strings.TrimLeft(input[operandBorder:], "+")); err != nil {
+		return "", fmt.Errorf("failed to convert %q: %w", input[operandBorder:], err)
+	}
+	return fmt.Sprint(firstOperand + secondOperand), nil
 }
 
-func operandQuant(input string) []string {
-	var nSlice []string
-	s := strings.Split(strings.TrimFunc(input, func(r rune) bool { return !unicode.IsNumber(r) && !unicode.IsLetter(r) }), "-")
-	for _, v := range s {
-		vs := strings.Split(strings.TrimFunc(v, func(r rune) bool { return !unicode.IsNumber(r) && !unicode.IsLetter(r) }), "+")
-		for _, b := range vs {
-			nSlice = append(nSlice, strings.TrimFunc(b, func(r rune) bool { return !unicode.IsNumber(r) && !unicode.IsLetter(r) }))
-		}
+func operandsCount(input string) (count int) {
+	input = strings.TrimLeft(strings.TrimLeft(input, "+"), "-")
+	for _, subInput := range strings.Split(input, "-") {
+		count = count + len(strings.Split(subInput, "+"))
 	}
-	var numSlice []string
-	for _, v := range nSlice {
-		if strings.ContainsAny(v, "0123456789") {
-			numSlice = append(numSlice, v)
-		}
-	}
-
-	return numSlice
-}
-
-func signs(input, sep string) (so1, so2 int) {
-	so1, so2 = 1, 1
-	v := strings.SplitN(input, sep, 2)
-	for _, vv := range v[0] {
-		if string(vv) == "-" {
-			so1 *= -1
-		}
-	}
-	for _, vv := range v[1] {
-		if string(vv) == "-" {
-			so2 *= -1
-		}
-	}
-
-	return so1, so2
+	return
 }
