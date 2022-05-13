@@ -2,6 +2,10 @@ package string_sum
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"unicode"
 )
 
 //use these errors as appropriate, wrapping them with fmt.Errorf function
@@ -23,5 +27,66 @@ var (
 // Use the errors defined above as described, again wrapping into fmt.Errorf
 
 func StringSum(input string) (output string, err error) {
-	return "", nil
+
+	if input == "" || strings.TrimSpace(input) == "" {
+		return "", fmt.Errorf("%w", errorEmptyInput)
+	}
+
+	numSlice := operandQuant(input)
+	if len(numSlice) != 2 {
+		fmt.Println(numSlice, len(numSlice))
+		return "", fmt.Errorf("%w", errorNotTwoOperands)
+	}
+
+	o1, err := strconv.Atoi(numSlice[0])
+	if err != nil {
+		return "", fmt.Errorf("first element of slice is not valid: %w", err)
+	}
+	o2, err := strconv.Atoi(numSlice[1])
+	if err != nil {
+		return "", fmt.Errorf("second element of slice is not valid: %w", err)
+	}
+
+	so1, so2 := signs(input, numSlice[0])
+
+	sum := o1*so1 + o2*so2
+	output = strconv.Itoa(sum)
+
+	return output, nil
+}
+
+func operandQuant(input string) []string {
+	var nSlice []string
+	s := strings.Split(strings.TrimFunc(input, func(r rune) bool { return !unicode.IsNumber(r) && !unicode.IsLetter(r) }), "-")
+	for _, v := range s {
+		vs := strings.Split(strings.TrimFunc(v, func(r rune) bool { return !unicode.IsNumber(r) && !unicode.IsLetter(r) }), "+")
+		for _, b := range vs {
+			nSlice = append(nSlice, strings.TrimFunc(b, func(r rune) bool { return !unicode.IsNumber(r) && !unicode.IsLetter(r) }))
+		}
+	}
+	var numSlice []string
+	for _, v := range nSlice {
+		if strings.ContainsAny(v, "0123456789") {
+			numSlice = append(numSlice, v)
+		}
+	}
+
+	return numSlice
+}
+
+func signs(input, sep string) (so1, so2 int) {
+	so1, so2 = 1, 1
+	v := strings.SplitN(input, sep, 2)
+	for _, vv := range v[0] {
+		if string(vv) == "-" {
+			so1 *= -1
+		}
+	}
+	for _, vv := range v[1] {
+		if string(vv) == "-" {
+			so2 *= -1
+		}
+	}
+
+	return so1, so2
 }
