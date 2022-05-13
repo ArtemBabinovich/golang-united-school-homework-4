@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 //use these errors as appropriate, wrapping them with fmt.Errorf function
@@ -14,6 +15,7 @@ var (
 	// Use when the expression has number of operands not equal to two
 	errorNotTwoOperands = errors.New("expecting two operands, but received more or less")
 )
+var noMoreOperands = errors.New("no more operands")
 
 // Implement a function that computes the sum of two int numbers written as a string
 // For example, having an input string "3+5", it should return output string "8" and nil error
@@ -25,68 +27,101 @@ var (
 //
 // Use the errors defined above as described, again wrapping into fmt.Errorf
 
-func prepareStr(input string) string {
-	inputWhiteSpacesOff := strings.ReplaceAll(input, " ", "")
-	if strings.HasPrefix(inputWhiteSpacesOff, "+") {
-		inputWhiteSpacesOff = inputWhiteSpacesOff[1:]
-	}
-	return inputWhiteSpacesOff
-}
-
-func getSumOfStrNums(input []string, binarSign bool) (string, error) {
-	firstOper, err := strconv.Atoi(input[0])
-	if err != nil {
-		return "", fmt.Errorf("%w", err)
-	}
-	secondOper, err := strconv.Atoi(input[1])
-	if err != nil {
-		return "", fmt.Errorf("%w", err)
-	}
-	if binarSign {
-		return strconv.Itoa(firstOper + secondOper), nil
-	}
-	return strconv.Itoa(secondOper - firstOper), nil
-}
-
-func getSubOfStrNums(input []string, binarSign bool) (string, error) {
-	firstOper, err := strconv.Atoi(input[0])
-	if err != nil {
-		return "", fmt.Errorf("%w", err)
-	}
-	secondOper, err := strconv.Atoi(input[1])
-	if err != nil {
-		return "", fmt.Errorf("%w", err)
-	}
-	if binarSign {
-		return strconv.Itoa(firstOper - secondOper), nil
-	}
-	return strconv.Itoa(-(firstOper + secondOper)), nil
-}
-
 func StringSum(input string) (output string, err error) {
-	preparedString := prepareStr(input)
-	if len(preparedString) == 0 {
-		return "", fmt.Errorf("%w", errorEmptyInput)
+	fmt.Printf("input: %q\n", input)
+	input = strings.TrimSpace(input)
+	if len(input) == 0 {
+		return "", fmt.Errorf("empty input: %w", errorEmptyInput)
+	}
+	var operands []operand
+	runes := []rune(input)
+	pos := 0
+	for {
+		operand, err := getOperand(runes, pos)
+		if err != nil {
+			if err == noMoreOperands {
+				break
+			}
+			return "", err
+		}
+		if len(operands) > 0 {
+			if !operand.hasSign {
+				return "",
+					fmt.Errorf("missing sign between operands %d and %d",
+						len(operands), len(operands)+1)
+			}
+		}
+		operands = append(operands, operand)
+		pos = operand.posEnd
 	}
 
-	binSign := true
-	if strings.HasPrefix(preparedString, "-") {
-		binSign = false
-		preparedString = preparedString[1:]
+	if len(operands) != 2 {
+		return "", fmt.Errorf("bad input %q: %w", input, errorNotTwoOperands)
 	}
 
-	inputApartPlus := strings.Split(preparedString, "+")
-	if len(inputApartPlus) > 2 {
-		return "", fmt.Errorf("%w", errorNotTwoOperands)
-	}
-	if len(inputApartPlus) == 2 {
-		return getSumOfStrNums(inputApartPlus, binSign)
+	result := operands[0].value + operands[1].value
+
+	return strconv.Itoa(result), nil
+}
+
+type operand struct {
+	value    int
+	hasSign  bool
+	posStart int
+	posEnd   int
+}
+
+func getOperand(runes []rune, start int) (operand, error) {
+	var result operand
+	var negative bool
+
+	for i := start; i < len(runes); i++ {
+		r := runes[i]
+		if r == '+' {
+			if result.hasSign {
+				return operand{}, fmt.Errorf("multiple operators")
+			}
+			result.hasSign = true
+			continue
+		}
+		if r == '-' {
+			if result.hasSign {
+				return operand{}, fmt.Errorf("multiple operators")
+			}
+			result.hasSign = true
+			negative = true
+			continue
+		}
+		if unicode.IsDigit(r) {
+			result.posStart = i
+			valRunes := getValueRunes(runes, i)
+			value, err := strconv.Atoi(string(valRunes))
+			if err != nil {
+				return operand{}, fmt.Errorf("bad operand value: %w", err)
+			}
+			result.value = value
+			if negative {
+				result.value = -result.value
+			}
+			result.posEnd = result.posStart + len(valRunes)
+			return result, nil
+		}
+		if unicode.IsSpace(r) {
+			continue
+		}
+		return operand{}, fmt.Errorf("bad symbol %c", r)
 	}
 
-	inputApartMinus := strings.Split(preparedString, "-")
-	if len(inputApartMinus) != 2 {
-		return "", fmt.Errorf("%w", errorNotTwoOperands)
-	}
+	return operand{}, noMoreOperands
+}
 
-	return getSubOfStrNums(inputApartMinus, binSign)
+func getValueRunes(runes []rune, start int) []rune {
+	i := start + 1
+	for ; i < len(runes); i++ {
+		r := runes[i]
+		if !unicode.IsDigit(r) {
+			break
+		}
+	}
+	return runes[start:i]
 }
