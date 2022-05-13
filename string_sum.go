@@ -3,6 +3,7 @@ package string_sum
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -26,75 +27,83 @@ var (
 // Use the errors defined above as described, again wrapping into fmt.Errorf
 
 func StringSum(input string) (output string, err error) {
-	operand, sumOperand := FindOperand(input)
-	if operand == "" && sumOperand == 1 {
-		err = fmt.Errorf("%w", errorEmptyInput)
-		return "", err
-	}
-	if operand == "" && sumOperand > 1 {
-		err = fmt.Errorf("%w", errorNotTwoOperands)
-		return "", err
-	}
-	nums := strings.Split(input, operand)
-	if len(nums) != 2 {
-		err = fmt.Errorf("%w", errorEmptyInput)
-		return "", err
+	input = strings.TrimSpace(input)
+	if len(input) == 0 {
+		return "", fmt.Errorf("e1: %w", errorEmptyInput)
 	}
 
-	num1, err := strconv.Atoi(nums[0])
-	if err != nil {
-		err = fmt.Errorf("%w", err)
-		return "", err
-	}
-	num2, err := strconv.Atoi(nums[1])
-	if err != nil {
-		err = fmt.Errorf("%w", err)
-		return "", err
+	lessPatern := `^[\s\+-]{0,}\d{1,}$`
+	re := regexp.MustCompile(lessPatern)
+	less := re.FindAllString(input, 1)
+	if len(less) == 1 {
+		return "", fmt.Errorf("e2: %w", errorNotTwoOperands)
 	}
 
-	result := Calculation(num1, num2, operand)
-	output = strconv.Itoa(result)
-	return output, nil
-}
-
-func Calculation(num1, num2 int, operand string) (result int) {
-	switch operand {
-	case "+":
-		result = num1 + num2
-	case "-":
-		result = num1 - num2
-	case "*":
-		result = num1 * num2
-	case "/":
-		result = num1 / num2
-	case "%":
-		result = num1 % num2
+	pattern := `^[\s\+-]{0,}[0-9a-z]{1,}[\s\+-]{0,}[0-9a-z]{1,}`
+	re = regexp.MustCompile(pattern)
+	remain := re.ReplaceAllString(input, "")
+	if len(remain) > 0 {
+		return "", fmt.Errorf("e3: %w", errorNotTwoOperands)
 	}
-	return result
-}
 
-func FindOperand(input string) (operand string, count int) {
-	for _, value := range input {
-		if value == '+' {
-			operand = "+"
-			count++
-		} else if value == '-' {
-			operand = "-"
-			count++
-		} else if value == '*' {
-			operand = "*"
-			count++
-		} else if value == '/' {
-			operand = "/"
-			count++
-		} else if value == '%' {
-			operand = "%"
-			count++
+	var x, y int
+	var started, signMinus, definedX bool
+
+	for _, v := range input {
+		val := string(v)
+		if !definedX {
+			_, err := strconv.Atoi(val)
+			if err != nil {
+				if val == "-" {
+					signMinus = true
+				} else if val == "+" || val == " " {
+				} else {
+					return "", fmt.Errorf("e3: %w",
+						&strconv.NumError{
+							Func: "Atoi",
+							Num:  strconv.Itoa(x) + val,
+							Err:  strconv.ErrSyntax,
+						})
+				}
+				if started {
+					definedX = true
+				}
+			} else {
+				x, _ = strconv.Atoi(strconv.Itoa(x) + val)
+				if signMinus {
+					x = -x
+				} else {
+					x = x
+				}
+				signMinus = false
+				started = true
+			}
+		} else if definedX {
+			_, err := strconv.Atoi(val)
+			if err != nil {
+				if val == "-" {
+					signMinus = true
+				} else if val == "+" || val == " " {
+				} else {
+					return "", fmt.Errorf("e3: %w",
+						&strconv.NumError{
+							Func: "Atoi",
+							Num:  strconv.Itoa(y) + val,
+							Err:  strconv.ErrSyntax,
+						})
+				}
+			} else {
+				y, _ = strconv.Atoi(strconv.Itoa(y) + val)
+				if signMinus {
+					y = -y
+				} else {
+					y = y
+				}
+				signMinus = false
+
+			}
 		}
 	}
-	if count > 1 {
-		operand = ""
-		return operand, count
-	}
-	return operand, count
+
+	return strconv.Itoa(x + y), nil
 }
