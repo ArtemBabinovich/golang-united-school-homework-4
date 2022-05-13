@@ -25,73 +25,68 @@ var (
 //
 // Use the errors defined above as described, again wrapping into fmt.Errorf
 
-var d = ""
+func prepareStr(input string) string {
+	inputWhiteSpacesOff := strings.ReplaceAll(input, " ", "")
+	if strings.HasPrefix(inputWhiteSpacesOff, "+") {
+		inputWhiteSpacesOff = inputWhiteSpacesOff[1:]
+	}
+	return inputWhiteSpacesOff
+}
+
+func getSumOfStrNums(input []string, binarSign bool) (string, error) {
+	firstOper, err := strconv.Atoi(input[0])
+	if err != nil {
+		return "", fmt.Errorf("%w", err)
+	}
+	secondOper, err := strconv.Atoi(input[1])
+	if err != nil {
+		return "", fmt.Errorf("%w", err)
+	}
+	if binarSign {
+		return strconv.Itoa(firstOper + secondOper), nil
+	}
+	return strconv.Itoa(secondOper - firstOper), nil
+}
+
+func getSubOfStrNums(input []string, binarSign bool) (string, error) {
+	firstOper, err := strconv.Atoi(input[0])
+	if err != nil {
+		return "", fmt.Errorf("%w", err)
+	}
+	secondOper, err := strconv.Atoi(input[1])
+	if err != nil {
+		return "", fmt.Errorf("%w", err)
+	}
+	if binarSign {
+		return strconv.Itoa(firstOper - secondOper), nil
+	}
+	return strconv.Itoa(-(firstOper + secondOper)), nil
+}
 
 func StringSum(input string) (output string, err error) {
-
-	innerWithoutSpace := strings.ReplaceAll(input, " ", "")
-	fmt.Println(input)
-	if d != input {
-		d = input
-		fmt.Println(StringSum(input))
+	preparedString := prepareStr(input)
+	if len(preparedString) == 0 {
+		return "", fmt.Errorf("%w", errorEmptyInput)
 	}
 
-	if len(innerWithoutSpace) == 0 {
-		err = fmt.Errorf("errorEmptyInput: %w", errorEmptyInput)
-		return
+	binSign := true
+	if strings.HasPrefix(preparedString, "-") {
+		binSign = false
+		preparedString = preparedString[1:]
 	}
 
-	err = nil
-	currentToken := ""
-	arguments := make([]string, 0)
-
-	for _, v := range innerWithoutSpace {
-		if v == 45 { // -
-			if len(currentToken) > 0 {
-				arguments = append(arguments, currentToken)
-				currentToken = string(v)
-			} else {
-				currentToken += string(v)
-			}
-		} else if v == 43 { //+
-			if len(currentToken) > 0 {
-				arguments = append(arguments, currentToken)
-				currentToken = ""
-			} else {
-				currentToken += string(v)
-			}
-		} else if v >= 48 && v <= 57 {
-			currentToken += string(v)
-		} else {
-			currentToken += string(v)
-			_, err2 := strconv.Atoi(currentToken)
-			err = fmt.Errorf("bad token: "+currentToken+" %w", err2)
-			return
-		}
+	inputApartPlus := strings.Split(preparedString, "+")
+	if len(inputApartPlus) > 2 {
+		return "", fmt.Errorf("%w", errorNotTwoOperands)
+	}
+	if len(inputApartPlus) == 2 {
+		return getSumOfStrNums(inputApartPlus, binSign)
 	}
 
-	arguments = append(arguments, currentToken)
-
-	if len(arguments) != 2 {
-		err = fmt.Errorf("errorNotTwoOperands: %w", errorNotTwoOperands)
-		return
+	inputApartMinus := strings.Split(preparedString, "-")
+	if len(inputApartMinus) != 2 {
+		return "", fmt.Errorf("%w", errorNotTwoOperands)
 	}
 
-	val1, err := strconv.Atoi(arguments[0])
-
-	if err != nil {
-		err = fmt.Errorf("bad first argument")
-		return
-	}
-
-	val2, err := strconv.Atoi(arguments[1])
-
-	if err != nil {
-		err = fmt.Errorf("bad second argument")
-		return
-	}
-
-	output = fmt.Sprint(val1 + val2)
-
-	return
+	return getSubOfStrNums(inputApartMinus, binSign)
 }
