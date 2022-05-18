@@ -3,6 +3,7 @@ package string_sum
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"unicode"
@@ -15,7 +16,6 @@ var (
 	// Use when the expression has number of operands not equal to two
 	errorNotTwoOperands = errors.New("expecting two operands, but received more or less")
 )
-var noMoreOperands = errors.New("no more operands")
 
 // Implement a function that computes the sum of two int numbers written as a string
 // For example, having an input string "3+5", it should return output string "8" and nil error
@@ -27,101 +27,67 @@ var noMoreOperands = errors.New("no more operands")
 //
 // Use the errors defined above as described, again wrapping into fmt.Errorf
 
+const (
+	errFormat = "err: %w"
+)
+
 func StringSum(input string) (output string, err error) {
-	fmt.Printf("input: %q\n", input)
-	input = strings.TrimSpace(input)
-	if len(input) == 0 {
-		return "", fmt.Errorf("empty input: %w", errorEmptyInput)
-	}
-	var operands []operand
-	runes := []rune(input)
-	pos := 0
-	for {
-		operand, err := getOperand(runes, pos)
-		if err != nil {
-			if err == noMoreOperands {
-				break
-			}
-			return "", err
-		}
-		if len(operands) > 0 {
-			if !operand.hasSign {
-				return "",
-					fmt.Errorf("missing sign between operands %d and %d",
-						len(operands), len(operands)+1)
-			}
-		}
-		operands = append(operands, operand)
-		pos = operand.posEnd
+
+	in := []rune(strings.ReplaceAll(input, " ", ""))
+	if len(in) == 0 {
+		return "", fmt.Errorf(errFormat, errorEmptyInput)
 	}
 
-	if len(operands) != 2 {
-		return "", fmt.Errorf("bad input %q: %w", input, errorNotTwoOperands)
-	}
+	var listNumbers []int
+	var num []rune
 
-	result := operands[0].value + operands[1].value
+	isDigitalBefore := false
 
-	return strconv.Itoa(result), nil
-}
-
-type operand struct {
-	value    int
-	hasSign  bool
-	posStart int
-	posEnd   int
-}
-
-func getOperand(runes []rune, start int) (operand, error) {
-	var result operand
-	var negative bool
-
-	for i := start; i < len(runes); i++ {
-		r := runes[i]
-		if r == '+' {
-			if result.hasSign {
-				return operand{}, fmt.Errorf("multiple operators")
-			}
-			result.hasSign = true
-			continue
+	for i := 0; i < len(in); i++ {
+		var first, AddToLists, isDigitalNow = false, false, false
+		if len(num) == 0 {
+			first = true
 		}
-		if r == '-' {
-			if result.hasSign {
-				return operand{}, fmt.Errorf("multiple operators")
-			}
-			result.hasSign = true
-			negative = true
-			continue
+		num = append(num, in[i])
+
+		if unicode.IsDigit(in[i]) {
+			isDigitalNow = true
+		} else {
+			isDigitalNow = false
 		}
-		if unicode.IsDigit(r) {
-			result.posStart = i
-			valRunes := getValueRunes(runes, i)
-			value, err := strconv.Atoi(string(valRunes))
+
+		if !first && isDigitalNow == false && isDigitalBefore || i == (len(in)-1) && unicode.IsDigit(in[i]) {
+			AddToLists = true
+		}
+
+		if AddToLists {
+			var number int
+			var err error
+
+			if i == len(in)-1 {
+				number, err = strconv.Atoi(string(num))
+			} else {
+				number, err = strconv.Atoi(string(num[0 : len(num)-1]))
+			}
 			if err != nil {
-				return operand{}, fmt.Errorf("bad operand value: %w", err)
+				log.Println(err)
+				return "", fmt.Errorf(errFormat, err)
 			}
-			result.value = value
-			if negative {
-				result.value = -result.value
-			}
-			result.posEnd = result.posStart + len(valRunes)
-			return result, nil
-		}
-		if unicode.IsSpace(r) {
-			continue
-		}
-		return operand{}, fmt.Errorf("bad symbol %c", r)
-	}
 
-	return operand{}, noMoreOperands
-}
+			listNumbers = append(listNumbers, number)
+			num = nil
+			num = append(num, in[i])
+		}
 
-func getValueRunes(runes []rune, start int) []rune {
-	i := start + 1
-	for ; i < len(runes); i++ {
-		r := runes[i]
-		if !unicode.IsDigit(r) {
-			break
+		if unicode.IsDigit(in[i]) {
+			isDigitalBefore = true
+		} else {
+			isDigitalBefore = false
 		}
 	}
-	return runes[start:i]
+	if len(listNumbers) != 2 {
+		return "", fmt.Errorf(errFormat, errorNotTwoOperands)
+	}
+
+	return strconv.Itoa(listNumbers[0] + listNumbers[1]), nil
 }
